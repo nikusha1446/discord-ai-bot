@@ -13,6 +13,14 @@ client.once(Events.ClientReady, (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag}`);
 });
 
+client.on(Events.MessageCreate, (message) => {
+  if (message.author.bot) return;
+
+  if (message.content === '!ping') {
+    message.reply('Pong!');
+  }
+});
+
 const token = process.env.DISCORD_TOKEN;
 
 if (!token) {
