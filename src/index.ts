@@ -1,16 +1,8 @@
 import 'dotenv/config';
 import { Client, Events, GatewayIntentBits } from 'discord.js';
-import OpenAI from 'openai';
-
-const token = process.env.DISCORD_TOKEN;
-const openaiKey = process.env.OPENAI_API_KEY;
-
-if (!token || !openaiKey) {
-  console.error(
-    'Missing environment variables: DISCORD_TOKEN and OPENAI_API_KEY are required'
-  );
-  process.exit(1);
-}
+import { addToHistory, clearHistory, getHistory } from './history.js';
+import { openai } from './openai.js';
+import { config } from './config.js';
 
 const client = new Client({
   intents: [
@@ -19,41 +11,6 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
   ],
 });
-
-const openai = new OpenAI({
-  apiKey: openaiKey,
-});
-
-const conversationHistory = new Map<
-  string,
-  OpenAI.ChatCompletionMessageParam[]
->();
-
-const MAX_HISTORY_LENGTH = 20;
-
-function getHistory(channelId: string): OpenAI.ChatCompletionMessageParam[] {
-  if (!conversationHistory.has(channelId)) {
-    conversationHistory.set(channelId, []);
-  }
-  return conversationHistory.get(channelId)!;
-}
-
-function addToHistory(
-  channelId: string,
-  role: 'user' | 'assistant',
-  content: string
-): void {
-  const history = getHistory(channelId);
-  history.push({ role, content });
-
-  if (history.length > MAX_HISTORY_LENGTH) {
-    history.splice(0, history.length - MAX_HISTORY_LENGTH);
-  }
-}
-
-function clearHistory(channelId: string): void {
-  conversationHistory.delete(channelId);
-}
 
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag}`);
@@ -81,7 +38,6 @@ client.on(Events.MessageCreate, async (message) => {
     await message.channel.sendTyping();
 
     const displayName = message.member?.displayName ?? message.author.username;
-
     addToHistory(message.channelId, 'user', `${displayName}: ${userMessage}`);
 
     const response = await openai.chat.completions.create({
@@ -108,4 +64,4 @@ client.on(Events.MessageCreate, async (message) => {
   }
 });
 
-client.login(token);
+client.login(config.discordToken);
