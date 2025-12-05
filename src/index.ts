@@ -80,7 +80,9 @@ client.on(Events.MessageCreate, async (message) => {
   try {
     await message.channel.sendTyping();
 
-    addToHistory(message.channelId, 'user', userMessage);
+    const displayName = message.member?.displayName ?? message.author.username;
+
+    addToHistory(message.channelId, 'user', `${displayName}: ${userMessage}`);
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
