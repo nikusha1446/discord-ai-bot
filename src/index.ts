@@ -41,6 +41,8 @@ client.on(Events.MessageCreate, async (message) => {
   }
 
   try {
+    await message.channel.sendTyping();
+
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
