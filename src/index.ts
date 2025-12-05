@@ -51,12 +51,22 @@ function addToHistory(
   }
 }
 
+function clearHistory(channelId: string): void {
+  conversationHistory.delete(channelId);
+}
+
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag}`);
 });
 
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot) return;
+
+  if (message.content === '!clear') {
+    clearHistory(message.channelId);
+    message.reply('Conversation history cleared!');
+    return;
+  }
 
   if (!message.mentions.has(client.user!)) return;
 
