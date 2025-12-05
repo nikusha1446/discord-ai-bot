@@ -24,6 +24,33 @@ const openai = new OpenAI({
   apiKey: openaiKey,
 });
 
+const conversationHistory = new Map<
+  string,
+  OpenAI.ChatCompletionMessageParam[]
+>();
+
+const MAX_HISTORY_LENGTH = 20;
+
+function getHistory(channelId: string): OpenAI.ChatCompletionMessageParam[] {
+  if (!conversationHistory.has(channelId)) {
+    conversationHistory.set(channelId, []);
+  }
+  return conversationHistory.get(channelId)!;
+}
+
+function addToHistory(
+  channelId: string,
+  role: 'user' | 'assistant',
+  content: string
+): void {
+  const history = getHistory(channelId);
+  history.push({ role, content });
+
+  if (history.length > MAX_HISTORY_LENGTH) {
+    history.splice(0, history.length - MAX_HISTORY_LENGTH);
+  }
+}
+
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Logged in as ${readyClient.user.tag}`);
 });
@@ -43,6 +70,8 @@ client.on(Events.MessageCreate, async (message) => {
   try {
     await message.channel.sendTyping();
 
+    addToHistory(message.channelId, 'user', userMessage);
+
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -51,16 +80,14 @@ client.on(Events.MessageCreate, async (message) => {
           content:
             'You are a helpful Discord bot. Keep responses concise and friendly.',
         },
-        {
-          role: 'user',
-          content: userMessage,
-        },
+        ...getHistory(message.channelId),
       ],
     });
 
     const reply = response.choices[0].message.content;
 
     if (reply) {
+      addToHistory(message.channelId, 'assistant', reply);
       message.reply(reply);
     }
   } catch (error) {
